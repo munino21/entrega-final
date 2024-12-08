@@ -1,22 +1,27 @@
-let carrito = [];
+const carrito = [];
+const listaCarrito = document.getElementById("lista-carrito");
+const total = document.getElementById("total");
+const cantidadCarrito = document.getElementById("cantidad-carrito");
 let productos = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     fetch("js/productos.json")
         .then(response => response.json())
         .then(data => {
-            productos = data.map(producto => ({
-                ...producto,
-                stock: Math.floor(Math.random() * 16) + 5 
-            }));
+            productos = data;
+            productos.forEach(producto => {
+                producto.stock = Math.floor(Math.random() * 20) + 1; 
+            });
             renderizarProductos();
         })
         .catch(error => console.error("Error al cargar los productos:", error));
+
+    cargarCarrito();
 });
 
 function renderizarProductos() {
     const contenedor = document.getElementById("productos");
-    contenedor.innerHTML = "";
+    contenedor.innerHTML = ""; 
     productos.forEach(producto => {
         const card = document.createElement("div");
         card.classList.add("col-md-4", "mb-4");
@@ -27,8 +32,8 @@ function renderizarProductos() {
                     <h5 class="card-title">${producto.nombre}</h5>
                     <p class="card-text">${producto.descripcion}</p>
                     <p class="card-text fw-bold">Precio: $${producto.precio}</p>
-                    <p class="card-text">Stock disponible: <span id="stock-${producto.id}">${producto.stock}</span></p>
-                    <button class="btn btn-primary agregar-carrito" data-id="${producto.id}" ${producto.stock === 0 ? "disabled" : ""}>Agregar al Carrito</button>
+                    <p class="card-text">Stock disponible: ${producto.stock}</p>
+                    <button class="btn btn-primary agregar-carrito" data-id="${producto.id}">Agregar al Carrito</button>
                 </div>
             </div>
         `;
@@ -38,141 +43,166 @@ function renderizarProductos() {
 
 document.addEventListener("click", e => {
     if (e.target.classList.contains("agregar-carrito")) {
-        const productoId = parseInt(e.target.getAttribute("data-id"));
+        const productoId = e.target.getAttribute("data-id");
         agregarProductoAlCarrito(productoId);
+    } else if (e.target.classList.contains("eliminar")) {
+        const productoId = e.target.getAttribute("data-id");
+        eliminarProductoDelCarrito(productoId);
     } else if (e.target.id === "vaciar-carrito") {
         vaciarCarrito();
-    } else if (e.target.classList.contains("eliminar")) {
-        const productoId = parseInt(e.target.getAttribute("data-id"));
-        eliminarProductoDelCarrito(productoId);
-    } else if (e.target.classList.contains("aumentar")) {
-        const productoId = parseInt(e.target.getAttribute("data-id"));
-        cambiarCantidad(productoId, 1);
-    } else if (e.target.classList.contains("reducir")) {
-        const productoId = parseInt(e.target.getAttribute("data-id"));
-        cambiarCantidad(productoId, -1);
     } else if (e.target.id === "comprar") {
-        mostrarFormularioDatosUsuario();
+        mostrarFormularioPago();
     }
 });
 
 function agregarProductoAlCarrito(id) {
-    const producto = productos.find(p => p.id === id);
+    const producto = productos.find(p => p.id == id);
+    const existe = carrito.find(p => p.id == id);
+
     if (producto.stock > 0) {
-        const productoEnCarrito = carrito.find(p => p.id === id);
-        if (productoEnCarrito && productoEnCarrito.cantidad < producto.stock) {
-            productoEnCarrito.cantidad++;
-        } else if (!productoEnCarrito) {
+        if (existe) {
+            if (existe.cantidad < producto.stock) {
+                existe.cantidad++;
+                producto.stock--; 
+            } else {
+                Swal.fire("No hay suficiente stock", "Ya no puedes agregar más de este producto.", "warning");
+            }
+        } else {
             carrito.push({ ...producto, cantidad: 1 });
+            producto.stock--; 
         }
-        producto.stock--;
         actualizarCarrito();
-        actualizarStock(id);
-    }
-}
-
-function cambiarCantidad(id, cantidad) {
-    const productoEnCarrito = carrito.find(p => p.id === id);
-    const producto = productos.find(p => p.id === id);
-    if (productoEnCarrito && productoEnCarrito.cantidad + cantidad > 0 && producto.stock - cantidad >= 0) {
-        productoEnCarrito.cantidad += cantidad;
-        producto.stock -= cantidad;
-        actualizarCarrito();
-        actualizarStock(id);
-    } else if (productoEnCarrito.cantidad + cantidad === 0) {
-        eliminarProductoDelCarrito(id);
-    }
-}
-
-function actualizarStock(id) {
-    const stockElemento = document.getElementById(`stock-${id}`);
-    const producto = productos.find(p => p.id === id);
-    stockElemento.textContent = producto.stock;
-    const boton = document.querySelector(`.agregar-carrito[data-id="${id}"]`);
-    if (producto.stock === 0) {
-        boton.disabled = true;
+        renderizarProductos(); 
     } else {
-        boton.disabled = false;
+        Swal.fire("No hay stock disponible", "El producto ya no está disponible.", "error");
     }
 }
 
 function actualizarCarrito() {
-    const listaCarrito = document.getElementById("lista-carrito");
-    const cantidadCarrito = document.getElementById("cantidad-carrito");
-    const total = document.getElementById("total");
     listaCarrito.innerHTML = "";
-    let totalPrecio = 0;
+    let totalCompra = 0;
+    let cantidadTotal = 0;
+
     carrito.forEach(producto => {
-        totalPrecio += producto.precio * producto.cantidad;
-        const itemCarrito = document.createElement("li");
-        itemCarrito.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
-        itemCarrito.innerHTML = `
-            ${producto.nombre} - $${producto.precio} x ${producto.cantidad}
-            <button class="btn btn-danger btn-sm eliminar" data-id="${producto.id}">Eliminar</button>
-            <button class="btn btn-secondary btn-sm aumentar" data-id="${producto.id}">+</button>
-            <button class="btn btn-secondary btn-sm reducir" data-id="${producto.id}">-</button>
+        const li = document.createElement("li");
+        li.classList.add("list-group-item");
+        li.innerHTML = `
+            ${producto.nombre} - $${producto.precio.toFixed(2)} x ${producto.cantidad}
+            <button class="btn btn-danger btn-sm float-end eliminar" data-id="${producto.id}">X</button>
         `;
-        listaCarrito.appendChild(itemCarrito);
+        listaCarrito.appendChild(li);
+        totalCompra += producto.precio * producto.cantidad;
+        cantidadTotal += producto.cantidad;
     });
-    cantidadCarrito.textContent = carrito.length;
-    total.textContent = `Total: $${totalPrecio.toFixed(2)}`;
+
+    total.textContent = `Total: $${totalCompra.toFixed(2)}`;
+    cantidadCarrito.textContent = cantidadTotal;
+    guardarCarrito();
 }
 
 function vaciarCarrito() {
-    carrito = [];
-    productos.forEach(p => p.stock = Math.floor(Math.random() * 16) + 5); 
+    carrito.length = 0;
+    productos.forEach(producto => producto.stock = Math.floor(Math.random() * 20) + 1); 
+    actualizarCarrito();
+    renderizarProductos(); 
+}
+
+function guardarCarrito() {
+    localStorage.setItem("carrito", JSON.stringify(carrito));
+}
+
+function cargarCarrito() {
+    const carritoGuardado = JSON.parse(localStorage.getItem("carrito")) || [];
+    carrito.push(...carritoGuardado);
     actualizarCarrito();
 }
 
 function eliminarProductoDelCarrito(id) {
-    carrito = carrito.filter(p => p.id !== id);
-    const producto = productos.find(p => p.id === id);
-    producto.stock++;
+    const index = carrito.findIndex(producto => producto.id == id);
+    if (index !== -1) {
+        carrito[index].cantidad--;
+        const producto = productos.find(p => p.id == id);
+        producto.stock++;
+        if (carrito[index].cantidad <= 0) carrito.splice(index, 1);
+    }
     actualizarCarrito();
-    actualizarStock(id);
+    renderizarProductos(); 
 }
 
-function mostrarFormularioDatosUsuario() {
-    if (carrito.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Tu carrito está vacío.',
-            text: 'Por favor, agrega productos a tu carrito antes de proceder con la compra.',
-            confirmButtonText: 'Cerrar'
-        });
-        return;
-    }
-
-    const modal = new bootstrap.Modal(document.getElementById('modalDatosUsuario'));
+function mostrarFormularioPago() {
+    const modalHTML = `
+        <div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalPagoLabel">Método de Pago</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formPago">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="nombre" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="apellido" class="form-label">Apellido</label>
+                                <input type="text" class="form-control" id="apellido" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="dni" class="form-label">DNI</label>
+                                <input type="text" class="form-control" id="dni" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="direccion" class="form-label">Dirección</label>
+                                <input type="text" class="form-control" id="direccion" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="tarjeta" class="form-label">Número de tarjeta</label>
+                                <input type="text" class="form-control" id="tarjeta" required minlength="9" maxlength="11">
+                                <div id="errorTarjeta" class="text-danger" style="display: none;">El número de tarjeta debe tener entre 9 y 11 dígitos.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Confirmar Pago</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    const modal = new bootstrap.Modal(document.getElementById("modalPago"));
     modal.show();
+
+    document.getElementById("formPago").addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const tarjeta = document.getElementById("tarjeta").value;
+        if (tarjeta.length < 9 || tarjeta.length > 11) {
+            document.getElementById("errorTarjeta").style.display = "block";
+            return;
+        } else {
+            document.getElementById("errorTarjeta").style.display = "none";
+        }
+
+
+        const aprobado = Math.random() > 0.5; 
+
+        if (aprobado) {
+            Swal.fire("Compra aprobada", "¡Tu pago ha sido aprobado y tus productos serán enviados!", "success");
+        } else {
+            Swal.fire("Compra rechazada", "El pago fue rechazado. Intenta nuevamente.", "error");
+        }
+
+        vaciarCarrito(); 
+        modal.hide(); 
+    });
 }
 
-document.getElementById('confirmar-datos').addEventListener('click', () => {
-    const nombre = document.getElementById('nombre').value;
-    const email = document.getElementById('email').value;
-    const direccion = document.getElementById('direccion').value;
 
-    if (!nombre || !email || !direccion) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Faltan datos',
-            text: 'Por favor, completa todos los campos.',
-            confirmButtonText: 'Cerrar'
-        });
-        return;
 
-    }
-    Swal.fire({
-        icon: 'success',
-        title: 'Compra realizada con éxito!',
-        text: `¡Gracias, ${nombre}! Tu compra ha sido realizada y será enviada a: ${direccion}.`,
-        confirmButtonText: 'Aceptar'
 
-    }).then(() => {
-        vaciarCarrito();
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalDatosUsuario'));
-        modal.hide();
-    });
-});
+
+
+
+
 
 
