@@ -1,0 +1,38 @@
+[
+    {
+        "id": 1,
+        "nombre": "Spinner Básico",
+        "descripcion": "Un spinner sencillo pero efectivo.",
+        "precio": 7500,
+        "imagen": "assets/spinner basico.jpg"
+    },
+    {
+        "id": 2,
+        "nombre": "Spinner LED",
+        "descripcion": "Brilla en la oscuridad con luces LED.",
+        "precio": 9000,
+        "imagen": "assets/spinner led.webp"
+    },
+    {
+        "id": 3,
+        "nombre": "Spinner Metálico",
+        "descripcion": "Hecho de metal resistente, ideal para durar.",
+        "precio": 11000,
+        "imagen": "assets/Spinner Metálico.jpg"
+    },
+    {
+        "id": 4,
+        "nombre": "Spinner Edición Gamer",
+        "descripcion": "Diseño inspirado en videojuegos.",
+        "precio": 13000,
+        "imagen": "assets/Spinner Edición Gamer.webp"
+    },
+    {
+        "id": 5,
+        "nombre": "Spinner Premium",
+        "descripcion": "Alta calidad y diseño exclusivo.",
+        "precio": 16000,
+        "imagen": "assets/Spinner Premium.webp"
+    }
+]
+
